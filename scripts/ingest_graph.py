@@ -241,7 +241,7 @@ def ingest() -> dict:
 
 def main():
     print("=" * 60)
-    print("AXYM Research — Graph (PostgreSQL) Ingestion")
+    print("ΛXYM Research — Graph (PostgreSQL) Ingestion")
     print("=" * 60)
 
     print("  Method: INSERT...SELECT from medicaid_claims → graph tables")

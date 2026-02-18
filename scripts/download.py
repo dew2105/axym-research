@@ -101,7 +101,7 @@ def download_with_progress(url: str, dest: Path, expected_sha256: str) -> Path:
 def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     print("=" * 60)
-    print("AXYM Research — Data Download")
+    print("ΛXYM Research — Data Download")
     print("=" * 60)
     download_with_progress(PARQUET_URL, PARQUET_PATH, PARQUET_SHA256)
     print(f"\nDone. Parquet file ready at: {PARQUET_PATH}")

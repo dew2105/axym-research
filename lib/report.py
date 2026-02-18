@@ -92,7 +92,7 @@ def stacked_bar_traditional_vs_axym(
     traditional_results: list[BenchmarkResult],
     axym_result: BenchmarkResult | None = None,
 ) -> Figure:
-    """Stacked bar: traditional stack (PG + DuckDB + Graph) vs AXYM."""
+    """Stacked bar: traditional stack (PG + DuckDB + Graph) vs ΛXYM."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
     # Traditional stack — stacked components
@@ -110,29 +110,29 @@ def stacked_bar_traditional_vs_axym(
         )
         bottom += r.wall_time_seconds
 
-    # AXYM
+    # ΛXYM
     if axym_result and axym_result.error is None:
         ax.barh(
-            "AXYM",
+            "ΛXYM",
             axym_result.wall_time_seconds,
             color=COLORS["AXYM"],
             edgecolor="black",
             linewidth=0.5,
-            label="AXYM",
+            label="ΛXYM",
         )
     else:
         ax.barh(
-            "AXYM",
+            "ΛXYM",
             0,
             color=COLORS["AXYM"],
             edgecolor="black",
             linewidth=0.5,
-            label="AXYM (pending)",
+            label="ΛXYM (pending)",
         )
         ax.text(1, 1, "Pending — CLI not yet available", va="center", fontsize=10, style="italic")
 
     ax.set_xlabel("Wall Time (seconds)")
-    ax.set_title("Traditional Stack vs. AXYM — Total Ingestion Time")
+    ax.set_title("Traditional Stack vs. ΛXYM — Total Ingestion Time")
     ax.legend(loc="lower right")
     ax.invert_yaxis()
     plt.tight_layout()
@@ -145,32 +145,32 @@ def complexity_summary(traditional_results: list[BenchmarkResult]) -> pd.DataFra
         {
             "Metric": "Ingestion scripts",
             "Traditional Stack": "3",
-            "AXYM": "1",
+            "ΛXYM": "1",
         },
         {
             "Metric": "Query languages",
             "Traditional Stack": "1 (SQL + recursive CTEs)",
-            "AXYM": "1",
+            "ΛXYM": "1",
         },
         {
             "Metric": "Docker containers",
             "Traditional Stack": "0 (all hosted)",
-            "AXYM": "0",
+            "ΛXYM": "0",
         },
         {
             "Metric": "ETL pipelines",
             "Traditional Stack": "1 (tabular → graph)",
-            "AXYM": "0",
+            "ΛXYM": "0",
         },
         {
             "Metric": "Total wall time (s)",
             "Traditional Stack": f"{sum(r.wall_time_seconds for r in traditional_results):.1f}",
-            "AXYM": "Pending",
+            "ΛXYM": "Pending",
         },
         {
             "Metric": "Total disk (MB)",
             "Traditional Stack": f"{sum(r.disk_mb for r in traditional_results):,.0f}",
-            "AXYM": "Pending",
+            "ΛXYM": "Pending",
         },
     ]
     return pd.DataFrame(rows).set_index("Metric")

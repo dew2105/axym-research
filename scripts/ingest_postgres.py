@@ -161,7 +161,7 @@ def ingest() -> dict:
 
 def main():
     print("=" * 60)
-    print("AXYM Research — PostgreSQL/Neon Ingestion")
+    print("ΛXYM Research — PostgreSQL/Neon Ingestion")
     print("=" * 60)
 
     if not PARQUET_PATH.exists():

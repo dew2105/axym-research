@@ -1,6 +1,6 @@
-# AXYM Research — Medicaid Fraud Detection Pipeline
+# ΛXYM Research — Medicaid Fraud Detection Pipeline
 
-Benchmarking AXYM's unified data platform against a traditional multi-database stack for Medicaid fraud detection.
+Benchmarking ΛXYM's unified data platform against a traditional multi-database stack for Medicaid fraud detection.
 
 ## Pipeline Steps
 
@@ -76,7 +76,7 @@ axym-research/
 │   ├── ingest_postgres.py      # Parquet → PostgreSQL/Neon
 │   ├── ingest_duckdb.py        # Parquet → DuckDB/MotherDuck
 │   ├── ingest_graph.py          # medicaid_claims → graph tables (PostgreSQL)
-│   └── ingest_axym.py          # AXYM placeholder
+│   └── ingest_axym.py          # ΛXYM placeholder
 ├── notebooks/
 │   └── step_1_data_ingestion.ipynb
 ├── data/                       # Downloaded files (.gitignored)

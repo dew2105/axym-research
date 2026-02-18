@@ -1,4 +1,4 @@
-"""Central configuration for AXYM Research benchmarks."""
+"""Central configuration for ΛXYM Research benchmarks."""
 
 import os
 from pathlib import Path

@@ -53,7 +53,7 @@ def ingest() -> dict:
 
 def main():
     print("=" * 60)
-    print("AXYM Research — DuckDB/MotherDuck Ingestion")
+    print("ΛXYM Research — DuckDB/MotherDuck Ingestion")
     print("=" * 60)
 
     if not PARQUET_PATH.exists():
