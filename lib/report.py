@@ -1,4 +1,5 @@
 """Chart and table rendering utilities for the benchmark notebook."""
+from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -11,7 +12,7 @@ from lib.metrics import BenchmarkResult
 COLORS = {
     "PostgreSQL": "#336791",
     "DuckDB": "#FFF000",
-    "Neo4j": "#008CC1",
+    "Graph (PostgreSQL)": "#008CC1",
     "Traditional Total": "#7C8A9A",
     "AXYM": "#1E1F22",
 }
@@ -91,7 +92,7 @@ def stacked_bar_traditional_vs_axym(
     traditional_results: list[BenchmarkResult],
     axym_result: BenchmarkResult | None = None,
 ) -> Figure:
-    """Stacked bar: traditional stack (PG + DuckDB + Neo4j) vs AXYM."""
+    """Stacked bar: traditional stack (PG + DuckDB + Graph) vs AXYM."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
     # Traditional stack — stacked components
@@ -148,12 +149,12 @@ def complexity_summary(traditional_results: list[BenchmarkResult]) -> pd.DataFra
         },
         {
             "Metric": "Query languages",
-            "Traditional Stack": "2 (SQL + Cypher)",
+            "Traditional Stack": "1 (SQL + recursive CTEs)",
             "AXYM": "1",
         },
         {
             "Metric": "Docker containers",
-            "Traditional Stack": "2 (PostgreSQL + Neo4j)",
+            "Traditional Stack": "0 (all hosted)",
             "AXYM": "0",
         },
         {

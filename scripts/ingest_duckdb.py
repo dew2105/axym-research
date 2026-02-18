@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
-"""Ingest Medicaid claims Parquet data into DuckDB."""
+"""Ingest Medicaid claims Parquet data into DuckDB via MotherDuck."""
 
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import DUCKDB_PATH, PARQUET_PATH, RESULTS_DIR
+from config.settings import PARQUET_PATH, RESULTS_DIR
+from lib.connections import get_duckdb_connection
 from lib.metrics import run_with_metrics
-
-# DuckDB is imported inside ingest() to keep connection lifecycle clean
-import duckdb
 
 TABLE_NAME = "medicaid_claims"
 
 
 def ingest() -> dict:
-    """Load Parquet into DuckDB with a single SQL statement."""
-    # Remove existing database for clean benchmark
-    if DUCKDB_PATH.exists():
-        DUCKDB_PATH.unlink()
-
-    conn = duckdb.connect(str(DUCKDB_PATH))
+    """Load Parquet into MotherDuck with a single SQL statement."""
+    conn = get_duckdb_connection()
     try:
+        # Drop existing table for clean benchmark
+        conn.execute(f"DROP TABLE IF EXISTS {TABLE_NAME}")
+
         conn.execute(f"""
             CREATE TABLE {TABLE_NAME} AS
             SELECT * FROM read_parquet('{PARQUET_PATH}')
@@ -30,14 +27,22 @@ def ingest() -> dict:
         row_count = conn.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}").fetchone()[0]
 
         # Create indexes to match PostgreSQL for fair comparison
-        conn.execute(f"CREATE INDEX idx_billing_npi ON {TABLE_NAME}(Billing_Provider_NPI)")
-        conn.execute(f"CREATE INDEX idx_servicing_npi ON {TABLE_NAME}(Servicing_Provider_NPI)")
-        conn.execute(f"CREATE INDEX idx_hcpcs ON {TABLE_NAME}(HCPCS_Code)")
-        conn.execute(f"CREATE INDEX idx_claim_month ON {TABLE_NAME}(Claim_From_Month)")
+        conn.execute(f"CREATE INDEX idx_billing_npi ON {TABLE_NAME}(BILLING_PROVIDER_NPI_NUM)")
+        conn.execute(f"CREATE INDEX idx_servicing_npi ON {TABLE_NAME}(SERVICING_PROVIDER_NPI_NUM)")
+        conn.execute(f"CREATE INDEX idx_hcpcs ON {TABLE_NAME}(HCPCS_CODE)")
+        conn.execute(f"CREATE INDEX idx_claim_month ON {TABLE_NAME}(CLAIM_FROM_MONTH)")
+
+        # Estimate disk usage from MotherDuck metadata
+        try:
+            result = conn.execute(
+                "SELECT estimated_size FROM duckdb_tables() "
+                f"WHERE table_name = '{TABLE_NAME}'"
+            ).fetchone()
+            disk_bytes = result[0] if result else 0
+        except Exception:
+            disk_bytes = 0
     finally:
         conn.close()
-
-    disk_bytes = DUCKDB_PATH.stat().st_size
 
     return {
         "row_count": row_count,
@@ -48,7 +53,7 @@ def ingest() -> dict:
 
 def main():
     print("=" * 60)
-    print("AXYM Research — DuckDB Ingestion")
+    print("AXYM Research — DuckDB/MotherDuck Ingestion")
     print("=" * 60)
 
     if not PARQUET_PATH.exists():

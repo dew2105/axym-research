@@ -1,0 +1,38 @@
+{
+  "name": "Graph (PostgreSQL)",
+  "wall_time_seconds": 9327.644,
+  "cpu_user_seconds": 9.445,
+  "cpu_system_seconds": 5.23,
+  "peak_memory_mb": 54.7,
+  "disk_bytes": 34765848576,
+  "row_count": 376757907,
+  "error": null,
+  "timestamp": "2026-02-18T00:50:56.365606+00:00",
+  "metadata": {
+    "timings": {
+      "drop_tables_seconds": 0.317,
+      "create_tables_seconds": 0.634,
+      "populate_providers_seconds": 219.801,
+      "populate_procedures_seconds": 52.988,
+      "populate_billed_for_seconds": 4165.984,
+      "populate_referred_to_seconds": 4574.074,
+      "analyze_seconds": 15.442,
+      "etl_overhead_seconds": 9012.847
+    },
+    "counts": {
+      "total_nodes": 1813017,
+      "total_relationships": 374944890,
+      "provider_nodes": 1802136,
+      "procedure_nodes": 10881,
+      "billed_for_relationships": 227083361,
+      "referred_to_relationships": 147861529
+    },
+    "provider_count": 1802136,
+    "procedure_count": 10881,
+    "billed_for_count": 227083361,
+    "referred_to_count": 147861529,
+    "sampling": "none \u2014 full dataset",
+    "method": "INSERT INTO ... SELECT from medicaid_claims (server-side)",
+    "cost_note": "Dedicated graph DBs rejected due to cost. Neo4j AuraDB Pro: ~$5.76/hr (64 GB). TigerGraph Savanna: ~$4/hr (64 GB). PostgreSQL graph tables: $0 incremental (reuses Neon instance)."
+  }
+}

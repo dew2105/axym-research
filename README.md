@@ -17,10 +17,11 @@ Benchmarking AXYM's unified data platform against a traditional multi-database s
 
 ### Prerequisites
 
-- Docker & Docker Compose
 - Python 3.11+
 - ~15 GB free disk space
-- ~8 GB RAM
+- Cloud database accounts:
+  - [MotherDuck](https://motherduck.com/) (hosted DuckDB)
+  - [Neon](https://neon.tech/) (serverless PostgreSQL with pgvector)
 
 ### Setup & Run
 
@@ -29,7 +30,12 @@ git clone <repo-url> axym-research
 cd axym-research
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-make setup      # Start databases + download data (~2.9 GB)
+
+# Configure cloud credentials
+cp .env.example .env
+# Edit .env with your MotherDuck token and Neon DSN
+
+make setup      # Verify connections + download data (~2.9 GB)
 make benchmark  # Run all ingestion benchmarks
 make notebook   # Open Jupyter notebook with results
 ```
@@ -38,10 +44,15 @@ make notebook   # Open Jupyter notebook with results
 
 | Command | Description |
 |---------|-------------|
-| `make setup` | Start Docker containers, wait for health, download data |
+| `make setup` | Verify cloud connections, download data |
+| `make check-connections` | Test connectivity to MotherDuck and Neon |
 | `make benchmark` | Run all ingestion scripts, save results to `results/` |
 | `make notebook` | Launch JupyterLab with the Step 1 notebook |
-| `make clean` | Remove data files and Docker volumes |
+| `make clean` | Remove downloaded data files |
+
+## Graph Database Evaluation
+
+Dedicated graph databases (Neo4j AuraDB, TigerGraph Savanna) were evaluated and rejected due to cost at full dataset scale (1.81M nodes, 227M+ relationships). Instead, graph capabilities are demonstrated using PostgreSQL graph tables on the same Neon instance. See [`docs/graph_database_cost_analysis.md`](docs/graph_database_cost_analysis.md) for details.
 
 ## Data Source
 
@@ -56,18 +67,15 @@ make notebook   # Open Jupyter notebook with results
 ```
 axym-research/
 ├── config/settings.py          # Central configuration
-├── infra/                      # Database initialization
-│   ├── postgres/init.sql
-│   └── neo4j/neo4j.conf
 ├── lib/                        # Shared library code
 │   ├── metrics.py              # Benchmark framework
 │   ├── connections.py          # DB connection factories
 │   └── report.py               # Chart/table rendering
 ├── scripts/                    # Ingestion scripts
 │   ├── download.py             # Data download + verification
-│   ├── ingest_postgres.py      # Parquet → PostgreSQL
-│   ├── ingest_duckdb.py        # Parquet → DuckDB
-│   ├── ingest_neo4j.py         # Parquet → Neo4j (graph ETL)
+│   ├── ingest_postgres.py      # Parquet → PostgreSQL/Neon
+│   ├── ingest_duckdb.py        # Parquet → DuckDB/MotherDuck
+│   ├── ingest_graph.py          # medicaid_claims → graph tables (PostgreSQL)
 │   └── ingest_axym.py          # AXYM placeholder
 ├── notebooks/
 │   └── step_1_data_ingestion.ipynb

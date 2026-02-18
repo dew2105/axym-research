@@ -1,0 +1,15 @@
+{
+  "name": "AXYM",
+  "wall_time_seconds": 0.0,
+  "cpu_user_seconds": 0.0,
+  "cpu_system_seconds": 0.0,
+  "peak_memory_mb": 0.0,
+  "disk_bytes": 0,
+  "row_count": 0,
+  "error": "AXYM CLI not yet available",
+  "timestamp": "2026-02-17T20:44:14.973766+00:00",
+  "metadata": {
+    "status": "pending",
+    "reason": "CLI under development"
+  }
+}

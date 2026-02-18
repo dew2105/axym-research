@@ -4,6 +4,9 @@ data/*.csv
 data/*.csv.zip
 data/*.duckdb
 
+# Stray pip artifact
+=1.0
+
 # Environment
 .env
 .venv/
@@ -15,6 +18,3 @@ __pycache__/
 
 # OS
 .DS_Store
-
-# Neo4j import staging
-data/neo4j_import/

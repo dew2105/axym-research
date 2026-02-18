@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Ingest Medicaid claims Parquet data into PostgreSQL via COPY protocol."""
+"""Ingest Medicaid claims Parquet data into PostgreSQL/Neon via COPY protocol."""
 
+import json
 import sys
+import time
 from io import StringIO
 from pathlib import Path
 
@@ -14,21 +16,63 @@ from config.settings import PARQUET_PATH, RESULTS_DIR
 from lib.connections import get_postgres_connection
 from lib.metrics import BenchmarkResult, run_with_metrics
 
-BATCH_SIZE = 100_000
+BATCH_SIZE = 10_000
 TABLE_NAME = "medicaid_claims"
+CHECKPOINT_INTERVAL = 10_000  # checkpoint every batch (~10K rows)
+CHECKPOINT_PATH = RESULTS_DIR / "ingest_postgres_checkpoint.json"
 
-# Column mapping: Parquet column name → PostgreSQL column name
-COLUMN_MAP = {
-    "Billing_Provider_NPI": "billing_provider_npi",
-    "Servicing_Provider_NPI": "servicing_provider_npi",
-    "HCPCS_Code": "hcpcs_code",
-    "Claim_From_Month": "claim_from_month",
-    "Total_Unique_Beneficiaries": "total_unique_beneficiaries",
-    "Total_Claims": "total_claims",
-    "Total_Paid": "total_paid",
-}
+# Columns match between Parquet (uppercase) and PostgreSQL (lowercase — case insensitive)
+PG_COLUMNS = [
+    "billing_provider_npi_num",
+    "servicing_provider_npi_num",
+    "hcpcs_code",
+    "claim_from_month",
+    "total_unique_beneficiaries",
+    "total_claims",
+    "total_paid",
+]
 
-PG_COLUMNS = list(COLUMN_MAP.values())
+
+def _write_checkpoint(rows_loaded, total_rows, t_start, status="running"):
+    elapsed = time.time() - t_start
+    CHECKPOINT_PATH.write_text(json.dumps({
+        "rows_loaded": rows_loaded,
+        "total_rows": total_rows,
+        "elapsed_seconds": round(elapsed, 1),
+        "rows_per_second": round(rows_loaded / elapsed) if elapsed > 0 else 0,
+        "pct_complete": round(100 * rows_loaded / total_rows, 2) if total_rows > 0 else 0,
+        "status": status,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    }, indent=2) + "\n")
+
+
+def _ensure_schema(conn):
+    """Create extension, table, and indexes if they don't exist.
+
+    Replaces the Docker entrypoint init.sql for Neon.
+    """
+    conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    conn.execute(f"""
+        CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
+            billing_provider_npi_num    VARCHAR(10),
+            servicing_provider_npi_num  VARCHAR(10),
+            hcpcs_code                  VARCHAR(10),
+            claim_from_month            VARCHAR(10),
+            total_unique_beneficiaries  BIGINT,
+            total_claims                BIGINT,
+            total_paid                  DOUBLE PRECISION
+        )
+    """)
+    conn.commit()
+
+
+def _create_indexes(conn):
+    """Create B-tree indexes after bulk loading to avoid write amplification."""
+    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_billing_npi ON {TABLE_NAME}(billing_provider_npi_num)")
+    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_servicing_npi ON {TABLE_NAME}(servicing_provider_npi_num)")
+    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_hcpcs ON {TABLE_NAME}(hcpcs_code)")
+    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_claim_month ON {TABLE_NAME}(claim_from_month)")
+    conn.commit()
 
 
 def _truncate_table(conn):
@@ -52,17 +96,20 @@ def ingest() -> dict:
     total_rows = parquet_file.metadata.num_rows
 
     conn = get_postgres_connection()
+    t_start = time.time()
+    last_checkpoint_rows = 0
+    loaded = 0
+
     try:
+        _ensure_schema(conn)
         _truncate_table(conn)
 
         columns_str = ", ".join(PG_COLUMNS)
-        loaded = 0
 
         with tqdm(total=total_rows, desc="PostgreSQL COPY", unit="rows") as pbar:
             for batch in parquet_file.iter_batches(batch_size=BATCH_SIZE):
                 df = batch.to_pandas()
-                df = df.rename(columns=COLUMN_MAP)
-                df = df[PG_COLUMNS]
+                df.columns = [c.lower() for c in df.columns]
 
                 # Convert to CSV in memory for COPY
                 buf = StringIO()
@@ -78,11 +125,30 @@ def ingest() -> dict:
                 loaded += len(df)
                 pbar.update(len(df))
 
+                if loaded - last_checkpoint_rows >= CHECKPOINT_INTERVAL:
+                    _write_checkpoint(loaded, total_rows, t_start)
+                    last_checkpoint_rows = loaded
+
+        # Build indexes now that all data is loaded (much faster than incremental)
+        _create_indexes(conn)
+
         # Update statistics for query planner
         conn.execute(f"ANALYZE {TABLE_NAME}")
         conn.commit()
 
         disk_bytes = _get_table_size(conn)
+        _write_checkpoint(loaded, total_rows, t_start, status="complete")
+    except Exception:
+        # Try to get actual committed row count from DB
+        try:
+            err_conn = get_postgres_connection()
+            cur = err_conn.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}")
+            loaded = cur.fetchone()[0]
+            err_conn.close()
+        except Exception:
+            pass  # loaded stays at whatever it was
+        _write_checkpoint(loaded, total_rows, t_start, status="error")
+        raise
     finally:
         conn.close()
 
@@ -95,7 +161,7 @@ def ingest() -> dict:
 
 def main():
     print("=" * 60)
-    print("AXYM Research — PostgreSQL Ingestion")
+    print("AXYM Research — PostgreSQL/Neon Ingestion")
     print("=" * 60)
 
     if not PARQUET_PATH.exists():

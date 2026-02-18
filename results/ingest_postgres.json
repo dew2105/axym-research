@@ -1,0 +1,15 @@
+{
+  "name": "PostgreSQL",
+  "wall_time_seconds": 11576.748,
+  "cpu_user_seconds": 1313.603,
+  "cpu_system_seconds": 2157.19,
+  "peak_memory_mb": 168.2,
+  "disk_bytes": 27438268416,
+  "row_count": 227083361,
+  "error": null,
+  "timestamp": "2026-02-17T22:10:42.921391+00:00",
+  "metadata": {
+    "batch_size": 10000,
+    "table": "medicaid_claims"
+  }
+}

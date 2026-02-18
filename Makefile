@@ -1,38 +1,32 @@
-.PHONY: setup benchmark notebook clean download infra wait-healthy
+PYTHON ?= python3
+.PHONY: setup benchmark notebook clean download check-connections
 
-# Start Docker containers, wait for health, download data
-setup: infra wait-healthy download
+# Check cloud connections and download data
+setup: check-connections download
 
-# Start Docker infrastructure
-infra:
-	docker compose up -d
-
-# Wait for databases to be healthy
-wait-healthy:
-	@echo "Waiting for PostgreSQL..."
-	@python -c "import sys; sys.path.insert(0,'.'); from lib.connections import wait_for_postgres; sys.exit(0 if wait_for_postgres(60) else 1)"
-	@echo "PostgreSQL is ready."
-	@echo "Waiting for Neo4j..."
-	@python -c "import sys; sys.path.insert(0,'.'); from lib.connections import wait_for_neo4j; sys.exit(0 if wait_for_neo4j(120) else 1)"
-	@echo "Neo4j is ready."
+# Verify connectivity to all hosted services
+check-connections:
+	@echo "Checking cloud database connections..."
+	@$(PYTHON) -c "import sys; sys.path.insert(0,'.'); from lib.connections import verify_connections; s=verify_connections(); [print(f'  {k}: OK') for k,v in s.items() if v]; sys.exit(0 if all(s.values()) else 1)"
+	@echo "All connections verified."
 
 # Download dataset
 download:
-	python scripts/download.py
+	$(PYTHON) scripts/download.py
 
 # Run all ingestion benchmarks
 benchmark:
-	@echo "=== Running DuckDB ingestion ==="
-	python scripts/ingest_duckdb.py
+	@echo "=== Running DuckDB/MotherDuck ingestion ==="
+	$(PYTHON) scripts/ingest_duckdb.py
 	@echo ""
-	@echo "=== Running PostgreSQL ingestion ==="
-	python scripts/ingest_postgres.py
+	@echo "=== Running PostgreSQL/Neon ingestion ==="
+	$(PYTHON) scripts/ingest_postgres.py
 	@echo ""
-	@echo "=== Running Neo4j ingestion ==="
-	python scripts/ingest_neo4j.py
+	@echo "=== Running Graph (PostgreSQL) ingestion ==="
+	$(PYTHON) scripts/ingest_graph.py
 	@echo ""
 	@echo "=== Running AXYM ingestion (placeholder) ==="
-	python scripts/ingest_axym.py
+	$(PYTHON) scripts/ingest_axym.py
 	@echo ""
 	@echo "All benchmarks complete. Results in results/"
 
@@ -40,9 +34,7 @@ benchmark:
 notebook:
 	jupyter lab notebooks/step_1_data_ingestion.ipynb
 
-# Remove data files and Docker volumes
+# Remove data files
 clean:
-	rm -f data/*.parquet data/*.csv data/*.csv.zip data/*.duckdb data/*.partial
-	rm -rf data/neo4j_import
-	docker compose down -v
-	@echo "Cleaned data files and Docker volumes."
+	rm -f data/*.parquet data/*.csv data/*.csv.zip data/*.partial
+	@echo "Cleaned data files."

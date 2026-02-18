@@ -1,16 +1,12 @@
-"""Database connection factories and health-check waiters."""
+"""Database connection factories and connectivity checks."""
 
-import time
+import os
 
 import duckdb
 import psycopg
-from neo4j import GraphDatabase
 
 from config.settings import (
-    DUCKDB_PATH,
-    NEO4J_PASSWORD,
-    NEO4J_URI,
-    NEO4J_USER,
+    MOTHERDUCK_DB,
     POSTGRES_DSN,
 )
 
@@ -21,38 +17,40 @@ def get_postgres_connection() -> psycopg.Connection:
 
 
 def get_duckdb_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
-    """Return a DuckDB connection (file-backed)."""
-    return duckdb.connect(str(DUCKDB_PATH), read_only=read_only)
+    """Return a DuckDB connection via MotherDuck."""
+    if not os.getenv("MOTHERDUCK_TOKEN"):
+        raise RuntimeError(
+            "MOTHERDUCK_TOKEN environment variable is not set. "
+            "Set it in your .env file or export it in your shell."
+        )
+    return duckdb.connect(f"md:{MOTHERDUCK_DB}", read_only=read_only)
 
 
-def get_neo4j_driver():
-    """Return a Neo4j driver instance."""
-    return GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+def verify_connections() -> dict[str, bool]:
+    """Lightweight connectivity check for hosted services.
 
+    Returns a dict mapping service name to reachability (True/False).
+    """
+    status: dict[str, bool] = {}
 
-def wait_for_postgres(timeout: int = 60) -> bool:
-    """Poll PostgreSQL until it accepts connections or timeout."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            conn = get_postgres_connection()
-            conn.execute("SELECT 1")
-            conn.close()
-            return True
-        except Exception:
-            time.sleep(2)
-    return False
+    # MotherDuck / DuckDB
+    try:
+        conn = get_duckdb_connection()
+        conn.execute("SELECT 1")
+        conn.close()
+        status["MotherDuck"] = True
+    except Exception as exc:
+        print(f"  MotherDuck: FAILED — {exc}")
+        status["MotherDuck"] = False
 
+    # Neon / PostgreSQL
+    try:
+        conn = get_postgres_connection()
+        conn.execute("SELECT 1")
+        conn.close()
+        status["Neon"] = True
+    except Exception as exc:
+        print(f"  Neon: FAILED — {exc}")
+        status["Neon"] = False
 
-def wait_for_neo4j(timeout: int = 120) -> bool:
-    """Poll Neo4j until it accepts connections or timeout."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            driver = get_neo4j_driver()
-            driver.verify_connectivity()
-            driver.close()
-            return True
-        except Exception:
-            time.sleep(3)
-    return False
+    return status

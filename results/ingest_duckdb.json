@@ -1,0 +1,15 @@
+{
+  "name": "DuckDB",
+  "wall_time_seconds": 843.181,
+  "cpu_user_seconds": 89.299,
+  "cpu_system_seconds": 16.602,
+  "peak_memory_mb": 250.5,
+  "disk_bytes": 227083361,
+  "row_count": 227083361,
+  "error": null,
+  "timestamp": "2026-02-17T16:56:14.440657+00:00",
+  "metadata": {
+    "table": "medicaid_claims",
+    "source": "/Users/danielweisman/axym-research/data/medicaid-provider-spending.parquet"
+  }
+}
